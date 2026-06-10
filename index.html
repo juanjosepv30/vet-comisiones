@@ -1,16 +1,594 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vet Comisiones</title>
-  <style>
-    body { font-family: sans-serif; margin: 2rem; }
-    h1 { color: #2c7a4b; }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Vet Comisiones</title>
+<style>
+  :root {
+    --green:      #2c7a4b;
+    --green-lt:   #e8f5ed;
+    --green-md:   #48bb78;
+    --text:       #2d3748;
+    --text-sm:    #718096;
+    --border:     #e2e8f0;
+    --bg:         #f7fafc;
+    --white:      #ffffff;
+    --red:        #e53e3e;
+    --yellow:     #d69e2e;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* NAV */
+  nav { background: var(--green); color: var(--white); display: flex; align-items: center; gap: 1rem; padding: 0 1.5rem; height: 52px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,.2); }
+  .brand { font-weight: 700; font-size: 16px; white-space: nowrap; }
+  .tabs { display: flex; gap: 2px; }
+  .tab { background: transparent; border: none; color: rgba(255,255,255,.7); padding: 0 14px; height: 52px; cursor: pointer; font-size: 13px; font-weight: 500; transition: color .15s, background .15s; }
+  .tab:hover { color: var(--white); background: rgba(255,255,255,.1); }
+  .tab.active { color: var(--white); border-bottom: 3px solid var(--green-md); }
+
+  /* MAIN */
+  main { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* CARD */
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 1rem; color: var(--green); }
+
+  /* FILTERS */
+  .filters { display: flex; gap: .75rem; flex-wrap: wrap; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 12px; color: var(--text-sm); font-weight: 500; }
+  input, select { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: var(--white); outline: none; }
+  input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(44,122,75,.15); }
+  select { min-width: 150px; }
+
+  /* BUTTONS */
+  .btn { border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .15s; }
+  .btn:hover { opacity: .88; }
+  .btn-primary  { background: var(--green); color: var(--white); }
+  .btn-secondary{ background: var(--border); color: var(--text); }
+  .btn-danger   { background: var(--red); color: var(--white); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  /* TABLE */
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { background: var(--bg); font-weight: 600; font-size: 12px; color: var(--text-sm); text-transform: uppercase; letter-spacing: .5px; }
+  tr:hover td { background: var(--green-lt); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge-pending  { background: #fef3c7; color: #92400e; }
+  .badge-paid     { background: #d1fae5; color: #065f46; }
+
+  /* FORM GRID */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .form-field { display: flex; flex-direction: column; gap: 4px; }
+  .form-field label { font-size: 12px; font-weight: 500; color: var(--text-sm); }
+  .monto-display { background: var(--green-lt); border: 1px solid var(--green); border-radius: 6px; padding: 7px 10px; font-weight: 700; color: var(--green); font-size: 15px; }
+
+  /* SUMMARY CARDS */
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .stat-card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .stat-label { font-size: 11px; color: var(--text-sm); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+  .stat-value { font-size: 22px; font-weight: 700; color: var(--green); }
+  .stat-sub   { font-size: 12px; color: var(--text-sm); margin-top: 2px; }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 200; }
+  .modal-overlay.hidden { display: none; }
+  .modal { background: var(--white); border-radius: 10px; padding: 1.5rem; width: 100%; max-width: 460px; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 1.25rem; }
+  .modal-actions { display: flex; gap: .75rem; justify-content: flex-end; margin-top: 1.25rem; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--text); color: var(--white); padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; z-index: 300; box-shadow: 0 4px 12px rgba(0,0,0,.25); transition: opacity .3s; }
+  .toast.hidden { display: none; }
+  .toast.success { background: var(--green); }
+  .toast.error   { background: var(--red); }
+
+  .loader { text-align: center; padding: 2rem; color: var(--text-sm); }
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .section-header h2 { font-size: 18px; font-weight: 700; }
+  .empty { text-align: center; padding: 2rem; color: var(--text-sm); }
+</style>
 </head>
 <body>
-  <h1>Vet Comisiones</h1>
-  <p>Sistema de comisiones en construcción.</p>
+
+<nav>
+  <span class="brand">Vet Comisiones</span>
+  <div class="tabs">
+    <button class="tab active" data-tab="resumen"   onclick="navigate('resumen')">Resumen</button>
+    <button class="tab"        data-tab="registrar" onclick="navigate('registrar')">Registrar</button>
+    <button class="tab"        data-tab="historial" onclick="navigate('historial')">Historial</button>
+    <button class="tab"        data-tab="empleados" onclick="navigate('empleados')">Empleados</button>
+    <button class="tab"        data-tab="servicios" onclick="navigate('servicios')">Servicios</button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- RESUMEN -->
+  <section id="sec-resumen" class="section active">
+    <div class="section-header"><h2>Resumen de comisiones</h2></div>
+    <div class="card">
+      <div class="filters">
+        <div class="field"><label>Desde</label><input type="date" id="res-desde"/></div>
+        <div class="field"><label>Hasta</label><input type="date" id="res-hasta"/></div>
+        <button class="btn btn-primary" onclick="loadResumen()">Buscar</button>
+      </div>
+    </div>
+    <div id="resumen-stats" class="summary-grid"></div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Empleado</th><th>Servicios</th><th>Total ventas</th><th>Total comisión</th></tr></thead>
+          <tbody id="resumen-body"><tr><td colspan="4" class="empty">Seleccioná un período y presioná Buscar</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- REGISTRAR -->
+  <section id="sec-registrar" class="section">
+    <div class="section-header"><h2>Registrar comisión</h2></div>
+    <div class="card" style="max-width:520px">
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Fecha</label>
+          <input type="date" id="reg-fecha"/>
+        </div>
+        <div class="form-field">
+          <label>Empleado</label>
+          <select id="reg-empleado"><option value="">Cargando...</option></select>
+        </div>
+        <div class="form-field full">
+          <label>Servicio</label>
+          <select id="reg-servicio" onchange="onServicioChange()"><option value="">Seleccioná un servicio</option></select>
+        </div>
+        <div class="form-field">
+          <label>Precio (COP)</label>
+          <input type="number" id="reg-precio" min="0" oninput="calcMonto()"/>
+        </div>
+        <div class="form-field">
+          <label>Comisión %</label>
+          <input type="number" id="reg-comision" min="0" max="100" oninput="calcMonto()"/>
+        </div>
+        <div class="form-field full">
+          <label>Monto comisión</label>
+          <div class="monto-display" id="reg-monto">$ 0</div>
+        </div>
+      </div>
+      <div style="margin-top:1.25rem">
+        <button class="btn btn-primary" onclick="guardarRegistro()">Guardar registro</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- HISTORIAL -->
+  <section id="sec-historial" class="section">
+    <div class="section-header"><h2>Historial</h2></div>
+    <div class="card">
+      <div class="filters">
+        <div class="field"><label>Empleado</label><select id="hist-empleado"><option value="">Todos</option></select></div>
+        <div class="field"><label>Estado</label>
+          <select id="hist-estado">
+            <option value="">Todos</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Pagada">Pagada</option>
+          </select>
+        </div>
+        <div class="field"><label>Desde</label><input type="date" id="hist-desde"/></div>
+        <div class="field"><label>Hasta</label><input type="date" id="hist-hasta"/></div>
+        <button class="btn btn-primary" onclick="loadHistorial()">Filtrar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Fecha</th><th>Empleado</th><th>Servicio</th><th>Precio</th><th>%</th><th>Comisión</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="historial-body"><tr><td colspan="9" class="empty loader">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- EMPLEADOS -->
+  <section id="sec-empleados" class="section">
+    <div class="section-header">
+      <h2>Empleados</h2>
+      <button class="btn btn-primary" onclick="openEmpleadoModal()">+ Agregar</button>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Nombre</th><th>Cargo</th><th>Comisión %</th><th></th></tr></thead>
+          <tbody id="empleados-body"><tr><td colspan="5" class="loader">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICIOS -->
+  <section id="sec-servicios" class="section">
+    <div class="section-header">
+      <h2>Servicios</h2>
+      <button class="btn btn-primary" onclick="openServicioModal()">+ Agregar</button>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Nombre</th><th>Precio</th><th>Comisión %</th><th></th></tr></thead>
+          <tbody id="servicios-body"><tr><td colspan="5" class="loader">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- MODAL -->
+<div id="modal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title" id="modal-title"></div>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="modal-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast hidden"></div>
+
+<script>
+const state = { empleados: [], servicios: [] };
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+
+function cop(n) {
+  return '$ ' + Number(n).toLocaleString('es-CO');
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function call(fn, ...args) {
+  return new Promise((resolve, reject) => {
+    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+  });
+}
+
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.add('hidden'), 3000);
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+
+function navigate(tab) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === 'sec-' + tab));
+  if (tab === 'historial') loadHistorial();
+  if (tab === 'empleados') loadEmpleados();
+  if (tab === 'servicios') loadServicios();
+  if (tab === 'registrar') initRegistrar();
+}
+
+// ── Cache loaders ─────────────────────────────────────────────────────────────
+
+async function fetchEmpleados() {
+  state.empleados = await call('getEmpleados');
+  return state.empleados;
+}
+
+async function fetchServicios() {
+  state.servicios = await call('getServicios');
+  return state.servicios;
+}
+
+function fillSelect(sel, items, valKey, labelFn, placeholder) {
+  sel.innerHTML = placeholder ? `<option value="">${placeholder}</option>` : '';
+  items.forEach(it => {
+    const opt = document.createElement('option');
+    opt.value = it[valKey];
+    opt.textContent = labelFn(it);
+    sel.appendChild(opt);
+  });
+}
+
+// ── Resumen ───────────────────────────────────────────────────────────────────
+
+async function loadResumen() {
+  const desde = document.getElementById('res-desde').value;
+  const hasta = document.getElementById('res-hasta').value;
+  const body  = document.getElementById('resumen-body');
+  const stats = document.getElementById('resumen-stats');
+  body.innerHTML = '<tr><td colspan="4" class="loader">Cargando...</td></tr>';
+  try {
+    const data = await call('getResumen', desde, hasta);
+    if (!data.length) {
+      body.innerHTML = '<tr><td colspan="4" class="empty">Sin registros en ese período</td></tr>';
+      stats.innerHTML = '';
+      return;
+    }
+    const totalVentas   = data.reduce((a, r) => a + r.ventas, 0);
+    const totalComision = data.reduce((a, r) => a + r.comision, 0);
+    const totalServ     = data.reduce((a, r) => a + r.registros, 0);
+    stats.innerHTML = `
+      <div class="stat-card"><div class="stat-label">Total ventas</div><div class="stat-value">${cop(totalVentas)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total comisiones</div><div class="stat-value">${cop(totalComision)}</div></div>
+      <div class="stat-card"><div class="stat-label">Servicios</div><div class="stat-value">${totalServ}</div></div>
+    `;
+    body.innerHTML = data.map(r => `
+      <tr>
+        <td>${r.empleado}</td>
+        <td>${r.registros}</td>
+        <td>${cop(r.ventas)}</td>
+        <td><strong>${cop(r.comision)}</strong></td>
+      </tr>`).join('');
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+// ── Historial ─────────────────────────────────────────────────────────────────
+
+async function loadHistorial() {
+  const body = document.getElementById('historial-body');
+  body.innerHTML = '<tr><td colspan="9" class="loader">Cargando...</td></tr>';
+  const filtros = {
+    empleado: document.getElementById('hist-empleado').value,
+    estado:   document.getElementById('hist-estado').value,
+    desde:    document.getElementById('hist-desde').value,
+    hasta:    document.getElementById('hist-hasta').value,
+  };
+  try {
+    const data = await call('getRegistros', filtros);
+    if (!data.length) {
+      body.innerHTML = '<tr><td colspan="9" class="empty">Sin registros</td></tr>';
+      return;
+    }
+    body.innerHTML = data.map(r => `
+      <tr>
+        <td>${r.ID}</td>
+        <td>${r.Fecha}</td>
+        <td>${r.Empleado}</td>
+        <td>${r.Servicio}</td>
+        <td>${cop(r.Precio)}</td>
+        <td>${r.Comision}%</td>
+        <td><strong>${cop(r.Monto)}</strong></td>
+        <td><span class="badge ${r.Estado === 'Pagada' ? 'badge-paid' : 'badge-pending'}">${r.Estado}</span></td>
+        <td>${r.Estado === 'Pendiente' ? `<button class="btn btn-sm btn-primary" onclick="pagarRegistro(${r.ID})">Marcar pagada</button>` : ''}</td>
+      </tr>`).join('');
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function pagarRegistro(id) {
+  try {
+    await call('marcarPagada', id);
+    toast('Comisión marcada como pagada');
+    loadHistorial();
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+// ── Empleados ─────────────────────────────────────────────────────────────────
+
+async function loadEmpleados() {
+  const body = document.getElementById('empleados-body');
+  body.innerHTML = '<tr><td colspan="5" class="loader">Cargando...</td></tr>';
+  try {
+    const data = await fetchEmpleados();
+    if (!data.length) {
+      body.innerHTML = '<tr><td colspan="5" class="empty">No hay empleados</td></tr>';
+      return;
+    }
+    body.innerHTML = data.map(e => `
+      <tr>
+        <td>${e.ID}</td>
+        <td>${e.Nombre}</td>
+        <td>${e.Cargo}</td>
+        <td>${e.Comision}%</td>
+        <td>
+          <button class="btn btn-sm btn-secondary" onclick='openEmpleadoModal(${JSON.stringify(e)})'>Editar</button>
+          <button class="btn btn-sm btn-danger"    onclick="confirmDelete('empleado', ${e.ID})">Eliminar</button>
+        </td>
+      </tr>`).join('');
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+function openEmpleadoModal(data) {
+  document.getElementById('modal-title').textContent = data ? 'Editar empleado' : 'Nuevo empleado';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-grid">
+      <div class="form-field full"><label>Nombre</label><input id="em-nombre" value="${data ? data.Nombre : ''}"/></div>
+      <div class="form-field"><label>Cargo</label><input id="em-cargo" value="${data ? data.Cargo : ''}"/></div>
+      <div class="form-field"><label>Comisión %</label><input type="number" id="em-comision" min="0" max="100" value="${data ? data.Comision : ''}"/></div>
+    </div>`;
+  document.getElementById('modal-save').onclick = async () => {
+    const payload = { nombre: document.getElementById('em-nombre').value.trim(), cargo: document.getElementById('em-cargo').value.trim(), comision: document.getElementById('em-comision').value };
+    if (!payload.nombre || !payload.cargo) return toast('Completá todos los campos', 'error');
+    if (data) payload.id = data.ID;
+    try {
+      await call('saveEmpleado', payload);
+      toast('Empleado guardado');
+      closeModal();
+      loadEmpleados();
+    } catch(e) { toast(e.message, 'error'); }
+  };
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+// ── Servicios ─────────────────────────────────────────────────────────────────
+
+async function loadServicios() {
+  const body = document.getElementById('servicios-body');
+  body.innerHTML = '<tr><td colspan="5" class="loader">Cargando...</td></tr>';
+  try {
+    const data = await fetchServicios();
+    if (!data.length) {
+      body.innerHTML = '<tr><td colspan="5" class="empty">No hay servicios</td></tr>';
+      return;
+    }
+    body.innerHTML = data.map(s => `
+      <tr>
+        <td>${s.ID}</td>
+        <td>${s.Nombre}</td>
+        <td>${cop(s.Precio)}</td>
+        <td>${s.Comision}%</td>
+        <td>
+          <button class="btn btn-sm btn-secondary" onclick='openServicioModal(${JSON.stringify(s)})'>Editar</button>
+          <button class="btn btn-sm btn-danger"    onclick="confirmDelete('servicio', ${s.ID})">Eliminar</button>
+        </td>
+      </tr>`).join('');
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+function openServicioModal(data) {
+  document.getElementById('modal-title').textContent = data ? 'Editar servicio' : 'Nuevo servicio';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-grid">
+      <div class="form-field full"><label>Nombre</label><input id="sv-nombre" value="${data ? data.Nombre : ''}"/></div>
+      <div class="form-field"><label>Precio (COP)</label><input type="number" id="sv-precio" min="0" value="${data ? data.Precio : ''}"/></div>
+      <div class="form-field"><label>Comisión %</label><input type="number" id="sv-comision" min="0" max="100" value="${data ? data.Comision : ''}"/></div>
+    </div>`;
+  document.getElementById('modal-save').onclick = async () => {
+    const payload = { nombre: document.getElementById('sv-nombre').value.trim(), precio: document.getElementById('sv-precio').value, comision: document.getElementById('sv-comision').value };
+    if (!payload.nombre || !payload.precio) return toast('Completá todos los campos', 'error');
+    if (data) payload.id = data.ID;
+    try {
+      await call('saveServicio', payload);
+      toast('Servicio guardado');
+      closeModal();
+      loadServicios();
+    } catch(e) { toast(e.message, 'error'); }
+  };
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+// ── Registrar ─────────────────────────────────────────────────────────────────
+
+async function initRegistrar() {
+  document.getElementById('reg-fecha').value = today();
+  const [emps, servs] = await Promise.all([fetchEmpleados(), fetchServicios()]);
+  fillSelect(document.getElementById('reg-empleado'), emps, 'Nombre', e => e.Nombre, 'Seleccioná un empleado');
+  fillSelect(document.getElementById('reg-servicio'), servs, 'Nombre', s => `${s.Nombre} — ${cop(s.Precio)}`, 'Seleccioná un servicio');
+  document.getElementById('reg-precio').value   = '';
+  document.getElementById('reg-comision').value = '';
+  document.getElementById('reg-monto').textContent = '$ 0';
+}
+
+function onServicioChange() {
+  const nombre = document.getElementById('reg-servicio').value;
+  const serv   = state.servicios.find(s => s.Nombre === nombre);
+  if (serv) {
+    document.getElementById('reg-precio').value   = serv.Precio;
+    document.getElementById('reg-comision').value = serv.Comision;
+    calcMonto();
+  }
+}
+
+function calcMonto() {
+  const precio   = Number(document.getElementById('reg-precio').value)   || 0;
+  const comision = Number(document.getElementById('reg-comision').value) || 0;
+  document.getElementById('reg-monto').textContent = cop(Math.round(precio * comision / 100));
+}
+
+async function guardarRegistro() {
+  const payload = {
+    fecha:    document.getElementById('reg-fecha').value,
+    empleado: document.getElementById('reg-empleado').value,
+    servicio: document.getElementById('reg-servicio').value,
+    precio:   document.getElementById('reg-precio').value,
+    comision: document.getElementById('reg-comision').value,
+  };
+  if (!payload.empleado || !payload.servicio || !payload.precio)
+    return toast('Completá todos los campos', 'error');
+  try {
+    await call('addRegistro', payload);
+    toast('Registro guardado');
+    document.getElementById('reg-empleado').value = '';
+    document.getElementById('reg-servicio').value = '';
+    document.getElementById('reg-precio').value   = '';
+    document.getElementById('reg-comision').value = '';
+    document.getElementById('reg-monto').textContent = '$ 0';
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+
+function confirmDelete(type, id) {
+  document.getElementById('modal-title').textContent = 'Confirmar eliminación';
+  document.getElementById('modal-body').innerHTML = `<p>¿Estás seguro de que querés eliminar este ${type}?</p>`;
+  document.getElementById('modal-save').className  = 'btn btn-danger';
+  document.getElementById('modal-save').textContent = 'Eliminar';
+  document.getElementById('modal-save').onclick = async () => {
+    try {
+      const fn = type === 'empleado' ? 'deleteEmpleado' : 'deleteServicio';
+      await call(fn, id);
+      toast(`${type.charAt(0).toUpperCase() + type.slice(1)} eliminado`);
+      closeModal();
+      if (type === 'empleado') loadEmpleados();
+      else loadServicios();
+    } catch(e) { toast(e.message, 'error'); }
+  };
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+  document.getElementById('modal-save').className  = 'btn btn-primary';
+  document.getElementById('modal-save').textContent = 'Guardar';
+}
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+
+// ── Historial selects ─────────────────────────────────────────────────────────
+
+async function populateHistorialFilter() {
+  const emps = await fetchEmpleados();
+  fillSelect(document.getElementById('hist-empleado'), emps, 'Nombre', e => e.Nombre, 'Todos');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+(async function init() {
+  const d = new Date();
+  const firstDay = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+  const lastDay  = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
+  document.getElementById('res-desde').value = firstDay;
+  document.getElementById('res-hasta').value = lastDay;
+  document.getElementById('hist-desde').value = firstDay;
+  document.getElementById('hist-hasta').value = lastDay;
+
+  try {
+    await call('ensureSetup');
+    await Promise.all([fetchEmpleados(), fetchServicios()]);
+    await Promise.all([loadResumen(), populateHistorialFilter()]);
+  } catch(e) {
+    toast('Error al inicializar la app', 'error');
+  }
+})();
+</script>
 </body>
 </html>

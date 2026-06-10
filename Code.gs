@@ -7,10 +7,10 @@ function doGet() {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+function getSpreadsheet() {
+  return SpreadsheetApp.openById(SHEET_ID);
 }
 
 function getSheet(name) {
-  return SpreadsheetApp.openById(SHEET_ID).getSheetByName(name);
+  return getSpreadsheet().getSheetByName(name);
 }
